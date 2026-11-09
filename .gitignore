@@ -9,3 +9,6 @@ android/local.properties
 *.apk
 *.keystore
 *.jks
+
+# Saida de compilacao do Arduino
+ControleRemoto/build/
