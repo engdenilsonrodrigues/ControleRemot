@@ -1,0 +1,11 @@
+# Senhas locais do ESP32 - nunca enviar
+ControleRemoto/segredos.h
+
+# Build Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+*.keystore
+*.jks

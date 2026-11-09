@@ -1,0 +1,23 @@
+plugins {
+    id 'com.android.application'
+}
+
+def numeroBuild = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+
+android {
+    namespace 'com.engdenilson.controleflexo'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.engdenilson.controleflexo"
+        minSdk 26
+        targetSdk 34
+        versionCode numeroBuild
+        versionName "1.0.${numeroBuild}"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

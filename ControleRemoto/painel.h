@@ -1,0 +1,151 @@
+#pragma once
+// Painel web para celular - replica o controle remoto Sleeve da impressora flexo.
+// Cada botao envia um bit (data-b) enquanto estiver pressionado.
+const char PAINEL_HTML[] PROGMEM = R"rawliteral(<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#156fb0">
+<title>Controle Flexo</title>
+<style>
+:root{--azul:#1c86cf;--azul2:#156fb0;--txt:#1d2a33;--ledoff:#1f3a26;--ledon:#3dff6e}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;background:#0f1a22;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--txt);overscroll-behavior:none}
+body{display:flex;justify-content:center;padding:10px 16px 20px}
+.corpo{width:100%;max-width:400px;background:linear-gradient(160deg,var(--azul),var(--azul2));border-radius:34px;padding:14px;box-shadow:0 10px 30px #0008,inset 0 2px 0 #fff3}
+.topo{display:flex;justify-content:space-between;align-items:center;color:#fff;padding:2px 8px 12px;font-size:13px;font-weight:600}
+.link{display:flex;align-items:center;gap:6px}
+.link i{width:10px;height:10px;border-radius:50%;background:#e33;box-shadow:0 0 6px #e33}
+.link.ok i{background:var(--ledon);box-shadow:0 0 8px var(--ledon)}
+.link.wifi i{background:#fb2;box-shadow:0 0 6px #fb2}
+.vel{background:#0005;border-radius:8px;padding:3px 8px;font-variant-numeric:tabular-nums}
+.placa{background:linear-gradient(115deg,#c9ced2,#eef1f3 30%,#b9bfc4 55%,#e4e7ea 80%,#c3c8cc);border-radius:16px;padding:16px 12px 10px;box-shadow:inset 0 1px 3px #0006}
+.btn{position:relative;width:62px;height:62px;border-radius:50%;border:0;padding:0;cursor:pointer;touch-action:none;
+ background:radial-gradient(circle at 50% 50%,#d9dde0 0 52%,#8e959b 54%,#f4f6f7 60%,#9aa1a7 72%,#5d646a 100%);
+ box-shadow:0 3px 5px #0006;transition:transform .05s}
+.btn::after{content:"";position:absolute;inset:15px;border-radius:50%;background:linear-gradient(135deg,#fff 0%,#c3c8cc 40%,#eceff1 60%,#a8aeb3 100%);box-shadow:inset 0 1px 2px #0005}
+.btn.on{transform:scale(.93);box-shadow:0 1px 2px #0008}
+.btn.on::after{background:linear-gradient(135deg,#9fd6ff,#5aaee6 50%,#bfe4ff);box-shadow:inset 0 2px 4px #0006}
+.seta{font-weight:900;font-size:20px;line-height:1;color:#222;text-align:center}
+.anel{position:relative;width:270px;height:270px;margin:0 auto 6px}
+.anel .circ{position:absolute;inset:22px;border:2px solid #333;border-radius:50%}
+.anel .btn{position:absolute}
+.led{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#3c6a48,var(--ledoff));box-shadow:0 0 0 3px #b0b6ba,inset 0 1px 2px #000a}
+.led.on{background:radial-gradient(circle at 40% 35%,#d9ffe2,var(--ledon) 45%,#0b8a2c);box-shadow:0 0 0 3px #b0b6ba,0 0 12px 3px #3dff6eaa}
+.anel .led{position:absolute;margin:-10px 0 0 -10px}
+.anel .n{position:absolute;font-size:12px;font-weight:700;margin:-8px 0 0 -4px}
+.anel .s{position:absolute;margin:-10px 0 0 -7px}
+.cor{position:absolute;left:50%;top:50%;margin:-58px 0 0 -16px;font-size:10px;font-weight:700}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;justify-items:center;margin:4px 0 10px}
+.col{display:flex;flex-direction:column;align-items:center;gap:6px}
+.cap{font-size:10px;font-weight:700;color:#444;margin-top:2px;text-transform:uppercase}
+.grade{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cx{border:2px solid #333;border-radius:12px;padding:6px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;min-height:104px}
+.cx b{font-size:10.5px;line-height:1.15;text-align:center;letter-spacing:.2px}
+.leds2{display:flex;flex-direction:column;justify-content:center;gap:16px;padding-left:8px}
+.leds2 div{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700}
+.marca{text-align:center;font-weight:800;font-style:italic;letter-spacing:1px;color:#333;margin-top:10px;font-size:15px}
+.aviso{color:#cfe6f7;font-size:11px;text-align:center;margin-top:10px;line-height:1.4}
+#off{display:none;position:fixed;left:16px;right:16px;bottom:16px;background:#c62828;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;text-align:center;box-shadow:0 4px 14px #0008}
+</style></head><body>
+<div class="corpo">
+ <div class="topo">
+  <div class="link" id="link"><i></i><span id="linkTxt">conectando...</span></div>
+  <div class="vel" id="vel">--- m/min</div>
+ </div>
+ <div class="placa">
+  <div class="anel" id="anel">
+   <div class="circ"></div>
+   <div class="seta s" style="left:135px;top:6px">&#9650;</div>
+   <button class="btn" data-b="1"  style="left:104px;top:22px"  aria-label="Registro para cima"></button>
+   <button class="btn" data-b="3"  style="left:32px;top:104px"  aria-label="Registro para esquerda"></button>
+   <div class="seta s" style="left:14px;top:135px">&#9664;</div>
+   <button class="btn" data-b="0"  style="left:104px;top:104px" aria-label="Seleciona cor"></button>
+   <div class="cor" style="margin:-49px 0 0 -12px">COR</div>
+   <button class="btn" data-b="4"  style="left:176px;top:104px" aria-label="Registro para direita"></button>
+   <div class="seta s" style="left:258px;top:135px">&#9654;</div>
+   <button class="btn" data-b="2"  style="left:104px;top:186px" aria-label="Registro para baixo"></button>
+   <div class="seta s" style="left:135px;top:264px">&#9660;</div>
+  </div>
+  <div class="cap" style="text-align:center;margin:-2px 0 6px">Registro da cor selecionada</div>
+
+  <div class="cols">
+   <div class="col"><div class="seta">&#9650;</div><button class="btn" data-b="8" aria-label="Coluna 1 sobe"></button><button class="btn" data-b="9" aria-label="Lado esquerdo desce"></button><div class="seta">&#9660;</div><div class="cap">Lado esq</div></div>
+   <div class="col"><div class="seta">&#9650;&#9650;</div><button class="btn" data-b="10" aria-label="Ambos sobem"></button><button class="btn" data-b="11" aria-label="Ambos descem"></button><div class="seta">&#9660;&#9660;</div><div class="cap">Ambos</div></div>
+   <div class="col"><div class="seta">&#9650;</div><button class="btn" data-b="12" aria-label="Coluna 3 sobe"></button><button class="btn" data-b="13" aria-label="Lado direito desce"></button><div class="seta">&#9660;</div><div class="cap">Lado dir</div></div>
+  </div>
+
+  <div class="grade">
+   <div class="cx"><b>CPC<br>ANILOX</b><button class="btn" data-b="5"></button></div>
+   <div class="leds2"><div><span class="led" id="ledCpc"></span>CPC</div><div><span class="led" id="ledAnx"></span>ANILOX</div></div>
+   <div class="cx"><b>IMPULSO<br>&nbsp;</b><button class="btn" data-b="6"></button></div>
+   <div class="cx"><b>ENCOSTA<br>AVAN&Ccedil;A</b><button class="btn" data-b="7"></button></div>
+   <div class="cx"><b>BATE&Ccedil;&Atilde;O<br><small style="font-weight:600;font-size:9px">GIRA TINTA</small></b><button class="btn" data-b="14"></button></div>
+   <div class="cx"><b>AUMENTAR<br>VELOCIDADE</b><button class="btn" data-b="17"></button></div>
+   <div class="cx"><b>AFASTA<br>RECUA</b><button class="btn" data-b="15"></button></div>
+   <div class="cx"><b>LIMPEZA<br>&nbsp;</b><button class="btn" data-b="16"></button></div>
+   <div class="cx"><b>DIMINUIR<br>VELOCIDADE</b><button class="btn" data-b="18"></button></div>
+  </div>
+  <div class="marca">FLEXO</div>
+ </div>
+ <div class="aviso">Comandos ativos somente enquanto o bot&atilde;o estiver pressionado.<br>Emerg&ecirc;ncia: use o bot&atilde;o f&iacute;sico da m&aacute;quina.</div>
+</div>
+<div id="off">Sem comunica&ccedil;&atilde;o com o controle &mdash; comandos bloqueados</div>
+<script>
+(function(){
+ // LEDs das estacoes (posicao igual ao controle fisico: graus a partir do topo, sentido horario)
+ var ang=[330,305,250,222,165,140,62,36], anel=document.getElementById('anel'), leds=[];
+ ang.forEach(function(a,i){
+  var r=113,cx=135,cy=135,rad=(a-90)*Math.PI/180;
+  var l=document.createElement('span');l.className='led';
+  l.style.left=(cx+r*Math.cos(rad))+'px';l.style.top=(cy+r*Math.sin(rad))+'px';anel.appendChild(l);leds.push(l);
+  var n=document.createElement('span');n.className='n';n.textContent=i+1;
+  n.style.left=(cx+(r+19)*Math.cos(rad))+'px';n.style.top=(cy+(r+19)*Math.sin(rad))+'px';anel.appendChild(n);
+ });
+
+ var ativos={}, bits=0, enviado=-1, ocupado=false, falhas=0, ultimoEnvio=0;
+ function calc(){var b=0;for(var k in ativos)b|=(1<<ativos[k]);return b>>>0;}
+ function marcar(){document.querySelectorAll('.btn').forEach(function(e){
+  var b=+e.dataset.b, on=false;for(var k in ativos)if(ativos[k]===b)on=true;e.classList.toggle('on',on);});}
+ function soltarTudo(){ativos={};bits=0;marcar();tick();}
+
+ document.querySelectorAll('.btn').forEach(function(e){
+  var b=+e.dataset.b;
+  e.addEventListener('pointerdown',function(ev){ev.preventDefault();
+   try{e.setPointerCapture(ev.pointerId);}catch(x){}
+   ativos[ev.pointerId]=b;bits=calc();marcar();if(navigator.vibrate)navigator.vibrate(15);tick();});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(function(t){
+   e.addEventListener(t,function(ev){if(ev.pointerId in ativos){delete ativos[ev.pointerId];bits=calc();marcar();tick();}});});
+  e.addEventListener('contextmenu',function(ev){ev.preventDefault();});
+ });
+ window.addEventListener('blur',soltarTudo);
+ document.addEventListener('visibilitychange',function(){if(document.hidden)soltarTudo();});
+
+ function status(j){
+  falhas=0;document.getElementById('off').style.display='none';
+  var lk=document.getElementById('link'),t=document.getElementById('linkTxt');
+  lk.className='link'+(j.l?' ok':(j.w?' wifi':''));
+  t.textContent=j.l?'CLP conectado':(j.w?'sem CLP':'sem rede do CLP');
+  for(var i=0;i<8;i++)leds[i].classList.toggle('on',!!(j.s>>i&1));
+  document.getElementById('ledCpc').classList.toggle('on',!!(j.t&1));
+  document.getElementById('ledAnx').classList.toggle('on',!!(j.t&2));
+  document.getElementById('vel').textContent=j.l?(j.v+' m/min'):'--- m/min';
+ }
+ function erro(){if(++falhas>=3)document.getElementById('off').style.display='block';}
+
+ // Um pedido por vez. Com botao pressionado reenvia a cada 150 ms (o ESP32 zera apos 500 ms sem noticias).
+ function tick(){
+  if(ocupado)return;
+  var agora=Date.now(), url=null;
+  if(bits!==enviado||(bits&&agora-ultimoEnvio>=150)){url='/cmd?b='+bits;var mand=bits;}
+  else if(agora-ultimoEnvio>=400){url='/st';}
+  if(!url)return;
+  ocupado=true;ultimoEnvio=agora;
+  var ctl=new AbortController(),to=setTimeout(function(){ctl.abort();},1200);
+  fetch(url,{cache:'no-store',signal:ctl.signal}).then(function(r){return r.json();})
+   .then(function(j){if(url!=='/st')enviado=mand;status(j);})
+   .catch(erro).finally(function(){clearTimeout(to);ocupado=false;setTimeout(tick,0);});
+ }
+ setInterval(tick,50);
+})();
+</script></body></html>)rawliteral";
