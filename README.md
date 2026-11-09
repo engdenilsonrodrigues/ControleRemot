@@ -2,7 +2,22 @@
 
 O ESP32 serve no celular uma tela que replica o controle remoto Sleeve da impressora flexográfica. Cada botão da tela, e cada botão físico ligado ao ESP32, vira um bit num DB do CLP S7-1200/S7-1500 pelo WiFi (protocolo S7, porta TCP 102). O status do CLP (LEDs das estações, CPC/Anilox, velocidade) volta para a tela.
 
-## Como usar no celular
+## App Android (Bluetooth)
+**Baixar:** https://github.com/engdenilsonrodrigues/ControleRemot/releases/latest/download/ControleFlexo.apk
+
+1. Abra o link no celular, baixe e instale. O Android vai pedir para permitir "instalar apps desconhecidos" para o navegador.
+2. Abra o **Controle Flexo** e permita o acesso a "Dispositivos por perto" (Bluetooth).
+3. O app encontra o ESP32 sozinho. Na **primeira vez** o Android pede o **PIN de pareamento** (padrão `123456`; troque `BLE_PIN` em `segredos.h`).
+4. Toque no indicador do topo para forçar a reconexão.
+
+Segurança do app:
+- Os comandos só valem com o dedo na tela. O app reenvia a cada 150 ms e o ESP32 zera tudo se ficar 0,5 s sem receber.
+- Se o Bluetooth cair, ou o app for minimizado, ou a tela apagar, a conexão é encerrada e os comandos são zerados.
+- O alcance do Bluetooth é de cerca de 10 a 30 m, sem passar por paredes metálicas.
+
+Cada envio para `android/` no GitHub gera um APK novo automaticamente (aba *Actions* → *Releases*). O APK é assinado com uma chave de teste: para atualizar, **desinstale a versão anterior** antes de instalar a nova.
+
+## Como usar no celular (pelo navegador, WiFi)
 1. Conecte o celular à rede WiFi **Controle-Flexo** (senha `flexo1234`, troque em `config.h`).
 2. Abra **http://192.168.4.1** no navegador. Para virar "app": menu do navegador → *Adicionar à tela inicial*.
 3. Se o celular estiver na mesma rede da fábrica, também dá para usar o IP que o ESP32 mostra no monitor serial.
@@ -89,9 +104,10 @@ O ESP32 DevKit não tem porta de rede. Use um **módulo W5500** (SPI) e, em `con
 Com cabo, o celular continua usando a rede **Controle-Flexo** do ESP32. A faixa do CLP não pode ser 192.168.4.x, que é a faixa usada pela rede do ESP32.
 
 ## Configurar e gravar
-1. Edite `ControleRemoto/config.h`: `WIFI_SSID`, `WIFI_SENHA` (rede da fábrica, **2,4 GHz**), `CLP_IP`, e a senha do `AP_SENHA`.
-2. Gravar: `gravar.bat COM4`, ou pela Arduino IDE (placa **ESP32 Dev Module**).
-3. Monitor serial em **115200** mostra a conexão, os comandos da tela (`[WEB] comandos 0x...`) e os botões físicos.
+1. Copie `ControleRemoto/segredos_exemplo.h` para `ControleRemoto/segredos.h` e coloque `WIFI_SSID`, `WIFI_SENHA` (rede da fábrica, **2,4 GHz**), `AP_SENHA` e `BLE_PIN`. Esse arquivo **não vai para o GitHub**.
+2. Em `ControleRemoto/config.h`: `CLP_IP` e, se usar cabo, `USAR_ETHERNET 1` e `ETH_IP`.
+3. Gravar: `gravar.bat COM4`, ou pela Arduino IDE (placa **ESP32 Dev Module**, *Partition Scheme*: **Huge APP (3MB No OTA)**, necessário por causa do Bluetooth).
+4. Monitor serial em **115200** mostra a conexão, os comandos da tela (`[WEB] comandos 0x...`) e os botões físicos.
 
 ## Problemas comuns
 | Mensagem no Serial | Causa provável |
