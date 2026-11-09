@@ -160,8 +160,50 @@ void monitorarRede() {
   }
 }
 
+// ---------------- Simulador do CLP ----------------
+// Responde aos botoes como a maquina faria, para testar o controle sem CLP.
+// Status DBB7.7 = 1 avisa a tela que e simulacao.
+const char* NOMES_CMD[19] = {
+  "COR", "REGISTRO ^", "REGISTRO v", "REGISTRO <", "REGISTRO >", "CPC/ANILOX", "IMPULSO",
+  "ENCOSTA/AVANCA", "LADO ESQ ^", "LADO ESQ v", "AMBOS ^^", "AMBOS vv", "LADO DIR ^",
+  "LADO DIR v", "BATECAO", "AFASTA/RECUA", "LIMPEZA", "AUMENTAR VEL", "DIMINUIR VEL"
+};
+
+void simularCLP(uint32_t p) {
+  static uint32_t anterior = 0;
+  static uint8_t estacao = 0;
+  static bool cpc = true, encostado = false;
+  static int velAlvo = 0;
+  uint32_t subida = p & ~anterior, descida = ~p & anterior;
+
+  for (int i = 0; i < 19; i++) {
+    if (subida & (1UL << i))  Serial.printf("[SIM] %-15s pressionado\n", NOMES_CMD[i]);
+    if (descida & (1UL << i)) Serial.printf("[SIM] %-15s solto\n", NOMES_CMD[i]);
+  }
+  if (subida & (1UL << 0)) estacao = (estacao + 1) % 8;           // COR: proxima cor
+  if (subida & (1UL << 5)) cpc = !cpc;                             // CPC <-> ANILOX
+  if (subida & (1UL << 7)) encostado = true;                       // ENCOSTA/AVANCA
+  if (subida & (1UL << 15)) encostado = false;                     // AFASTA/RECUA
+  if (p & (1UL << 17)) velAlvo = min(velAlvo + 2, 300);            // AUMENTAR (segurando)
+  if (p & (1UL << 18)) velAlvo = max(velAlvo - 2, 0);              // DIMINUIR (segurando)
+  anterior = p;
+
+  bool impulso = p & (1UL << 6);
+  bool rodando = impulso || (encostado && velAlvo > 0);
+  stEstacoes = 1 << estacao;
+  stFlags = (cpc ? 0x01 : 0x02) | (rodando ? 0x04 : 0) | 0x80;
+  velocidade = impulso && velAlvo == 0 ? 10 : (rodando ? velAlvo : 0);
+  linkOk = true;
+  digitalWrite(PINO_LED_OPERACAO, rodando ? HIGH : LOW);
+  digitalWrite(PINO_LED_FALHA, LOW);
+}
+
 // ---------------- CLP ----------------
 void cicloComunicacao() {
+#if MODO_SIMULADOR
+  simularCLP(bitsPainel() | bleBits(WEB_TIMEOUT_MS) | ((uint32_t)bitsFisicos() << 24));
+  return;
+#endif
   if (!redeOk()) { linkOk = false; return; }
 
   if (!clp.connected()) {

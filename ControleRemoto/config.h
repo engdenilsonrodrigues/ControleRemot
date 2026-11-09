@@ -3,6 +3,10 @@
 //  CONFIGURACAO - ajuste para a sua instalacao
 // ============================================================
 
+// --- SIMULADOR: 1 = o ESP32 simula o CLP (teste do controle sem maquina) ---
+//     0 = comunica com o CLP de verdade. Desligue antes de usar na maquina!
+#define MODO_SIMULADOR 1
+
 // --- Ligacao com o CLP: 0 = WiFi da fabrica | 1 = cabo de rede (modulo W5500) ---
 #define USAR_ETHERNET  0
 
